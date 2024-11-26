@@ -152,11 +152,15 @@ void loop() {
             recordingIndex = (recordingIndex + 1) % BUFFER_SIZE; // Обновление счетчика записи
             lastRecordingTime = millis(); // Обновить время последнего шага записи
         } else if (playing) {
-            // Воспроизведение из буфера до счетчика записи
-            if (millis() - lastRecordingTime >= (millis() - lastUpdate)) {
+            // Проверка, если буфер пустой
+            if (bufferIndex != 0) {
+                // Воспроизведение из буфера до счетчика записи
                 recv = buffer[bufferIndex];
                 bufferIndex = (bufferIndex + 1) % recordingIndex; // Воспроизведение до текущего индекса записи
                 lastUpdate = millis();
+            } else {
+                playing = false; // Прекратить воспроизведение, если буфер пуст
+                Serial.println("Буфер пуст, воспроизведение остановлено.");
             }
         }
 
