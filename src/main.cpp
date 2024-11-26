@@ -12,12 +12,14 @@ Servo RightFing;
 Servo RightElb;
 Servo RightBic;
 Servo RightShoul;
+Servo RightHandClaw; // Добавляем серво для клешни
 
 // Пины серв
 int rightFingers = 22; // кисть
 int rightElbow = 25;   // локоть
 int rightBiceps = 33;  // бицепс
 int rightShoulder = 32; // плечо  
+int rightHandClawPin = 26; // пин для клешни  
 
 // Адрес для ESP-NOW
 uint8_t broadcastAddress[] = {0xCC, 0xDB, 0xA7, 0x2F, 0x36, 0xE0};
@@ -38,6 +40,7 @@ typedef struct ServoAngles {
 // Переменные
 ServoAngles recv, buffer[BUFFER_SIZE];
 int currentFing = 90, currentElb = 90, currentBic = 90, currentShoul = 90;
+int currentClaw = 90; // Начальный угол для клешни
 
 // Для работы с буфером
 int bufferIndex = 0;
@@ -66,17 +69,20 @@ void setup() {
     RightElb.setPeriodHertz(50);
     RightBic.setPeriodHertz(50);
     RightShoul.setPeriodHertz(50);
+    RightHandClaw.setPeriodHertz(50); // Для клешни
 
     RightFing.attach(rightFingers, 500, 2400);
     RightElb.attach(rightElbow, 500, 2400);
     RightBic.attach(rightBiceps, 500, 2500);
     RightShoul.attach(rightShoulder, 500, 2400);
+    RightHandClaw.attach(rightHandClawPin, 500, 2400); // Привязываем клешню к пину
 
     // Установить начальные углы
     RightFing.write(currentFing);
     RightElb.write(currentElb);
     RightBic.write(currentBic);
     RightShoul.write(currentShoul);
+    RightHandClaw.write(currentClaw); // Установим начальный угол клешни
 
     TwoWayESP::Begin(broadcastAddress);
 }
@@ -114,7 +120,14 @@ void loop() {
             if (playing) {
                 recording = false; // Остановить запись при воспроизведении
                 Serial.println("Воспроизведение началось");
-            } else  Serial.println("Воспроизведение закончилось");
+            }
+        }
+
+        // Управление клешней
+        if (recv.buttRightHand == 1) {
+            currentClaw = 30; // Поворачиваем на 30 градусов, если кнопка нажата
+        } else {
+            currentClaw = 90; // Поворачиваем на 90 градусов, если кнопка не нажата
         }
     }
 
@@ -147,12 +160,13 @@ void loop() {
         RightElb.write(currentElb);
         RightBic.write(currentBic);
         RightShoul.write(currentShoul);
+        RightHandClaw.write(currentClaw); // Управление клешней
 
         // Вывод на последовательный монитор
-        if (playing) {   Serial.print(" "); Serial.print("play -");}
         Serial.print(" "); Serial.print(currentFing);
         Serial.print(" "); Serial.print(currentElb);
         Serial.print(" "); Serial.print(currentBic);
-        Serial.print("  "); Serial.println(currentShoul);
+        Serial.print(" "); Serial.print(currentShoul);
+        Serial.print(" "); Serial.println(currentClaw); // Выводим угол клешни
     }
 }
