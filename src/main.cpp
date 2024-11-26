@@ -41,6 +41,8 @@ int currentFing = 90, currentElb = 90, currentBic = 90, currentShoul = 90;
 
 // Для работы с буфером
 int bufferIndex = 0;
+int recordingIndex = 0;   // Счетчик текущей записи
+unsigned long lastRecordingTime = 0; // Время последнего шага записи
 bool recording = false;
 bool playing = false;
 
@@ -92,17 +94,27 @@ void loop() {
         recv.Serv2 = constrain(recv.Serv2, 3, 120);
         recv.Serv3 = constrain(recv.Serv3, 3, 120);
         recv.Serv4 = constrain(recv.Serv4, 3, 120);
+        recv.Serv1 = 90 - recv.Serv1;
+        recv.Serv4 = 90 - recv.Serv4;
+        recv.Serv3 = 90 - recv.Serv3;
 
         // Проверка кнопок
         if (recv.Butt1 == 1) { // Запуск/остановка записи
             recording = !recording;
-            playing = false; // Остановить воспроизведение
-            Serial.println("Запись началась");
+            if (recording) {
+                playing = false; // Остановить воспроизведение при записи
+                recordingIndex = 0; // Сброс счетчика записи
+                lastRecordingTime = millis(); // Сохранить время начала записи
+                Serial.println("Запись началась");
+            }
         }
+
         if (recv.Butt2 == 1) { // Запуск/остановка воспроизведения
             playing = !playing;
-            recording = false; // Остановить запись
-            Serial.println("Воспроизведение началось");
+            if (playing) {
+                recording = false; // Остановить запись при воспроизведении
+                Serial.println("Воспроизведение началось");
+            } else  Serial.println("Воспроизведение закончилось");
         }
     }
 
@@ -114,10 +126,15 @@ void loop() {
             // Сохранение данных в буфер
             buffer[bufferIndex] = recv;
             bufferIndex = (bufferIndex + 1) % BUFFER_SIZE; // Цикличный буфер
+            recordingIndex = (recordingIndex + 1) % BUFFER_SIZE; // Обновление счетчика записи
+            lastRecordingTime = millis(); // Обновить время последнего шага записи
         } else if (playing) {
-            // Воспроизведение из буфера
-            recv = buffer[bufferIndex];
-            bufferIndex = (bufferIndex + 1) % BUFFER_SIZE;
+            // Воспроизведение из буфера до счетчика записи
+            if (millis() - lastRecordingTime >= (millis() - lastUpdate)) {
+                recv = buffer[bufferIndex];
+                bufferIndex = (bufferIndex + 1) % recordingIndex; // Воспроизведение до текущего индекса записи
+                lastUpdate = millis();
+            }
         }
 
         // Плавное движение
@@ -132,9 +149,10 @@ void loop() {
         RightShoul.write(currentShoul);
 
         // Вывод на последовательный монитор
-        Serial.print("Fing: "); Serial.print(currentFing);
-        Serial.print(" Elb: "); Serial.print(currentElb);
-        Serial.print(" Bic: "); Serial.print(currentBic);
-        Serial.print(" Shoul: "); Serial.println(currentShoul);
+        if (playing) {   Serial.print(" "); Serial.print("play -");}
+        Serial.print(" "); Serial.print(currentFing);
+        Serial.print(" "); Serial.print(currentElb);
+        Serial.print(" "); Serial.print(currentBic);
+        Serial.print("  "); Serial.println(currentShoul);
     }
 }
