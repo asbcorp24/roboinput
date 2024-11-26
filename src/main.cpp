@@ -48,6 +48,7 @@ int recordingIndex = 0;   // Счетчик текущей записи
 unsigned long lastRecordingTime = 0; // Время последнего шага записи
 bool recording = false;
 bool playing = false;
+bool armEnabled = true; // Переменная для отслеживания состояния кнопки Butt3
 
 // Плавное движение
 int smoothMove(int current, int target, int step) {
@@ -123,6 +124,15 @@ void loop() {
             }
         }
 
+        if (recv.Butt3 == 1) { // Переключение состояния "руки"
+            armEnabled = !armEnabled;
+            if (armEnabled) {
+                Serial.println("Рука включена");
+            } else {
+                Serial.println("Рука отключена");
+            }
+        }
+
         // Управление клешней
         if (recv.buttRightHand == 1) {
             currentClaw = 30; // Поворачиваем на 30 градусов, если кнопка нажата
@@ -150,17 +160,19 @@ void loop() {
             }
         }
 
-        // Плавное движение
-        currentFing = smoothMove(currentFing, recv.Serv1, 2);
-        currentElb = smoothMove(currentElb, recv.Serv2, 2);
-        currentBic = smoothMove(currentBic, recv.Serv3, 2);
-        currentShoul = smoothMove(currentShoul, recv.Serv4, 2);
+        if (armEnabled) {
+            // Плавное движение
+            currentFing = smoothMove(currentFing, recv.Serv1, 2);
+            currentElb = smoothMove(currentElb, recv.Serv2, 2);
+            currentBic = smoothMove(currentBic, recv.Serv3, 2);
+            currentShoul = smoothMove(currentShoul, recv.Serv4, 2);
 
-        RightFing.write(currentFing);
-        RightElb.write(currentElb);
-        RightBic.write(currentBic);
-        RightShoul.write(currentShoul);
-        RightHandClaw.write(currentClaw); // Управление клешней
+            RightFing.write(currentFing);
+            RightElb.write(currentElb);
+            RightBic.write(currentBic);
+            RightShoul.write(currentShoul);
+            RightHandClaw.write(currentClaw); // Управление клешней
+        }
 
         // Вывод на последовательный монитор
         Serial.print(" "); Serial.print(currentFing);
