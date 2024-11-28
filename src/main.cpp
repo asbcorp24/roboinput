@@ -95,15 +95,18 @@ void loop() {
     // Проверка наличия данных
     if (TwoWayESP::Available()) {
         TwoWayESP::GetBytes(&recv, sizeof(ServoAngles));
-
+  
         // Ограничения на углы
-        recv.Serv1 = constrain(recv.Serv1, 3, 120);
-        recv.Serv2 = constrain(recv.Serv2, 3, 120);
-        recv.Serv3 = constrain(recv.Serv3, 3, 120);
-        recv.Serv4 = constrain(recv.Serv4, 3, 120);
+        recv.Serv1 = constrain(recv.Serv1, 3, 90);
+        recv.Serv2 = constrain(recv.Serv2, 3, 90);
+        recv.Serv3 = constrain(recv.Serv3, 20, 150);
+        recv.Serv4 = constrain(recv.Serv4, 3, 90);
+       
         recv.Serv1 = 90 - recv.Serv1;
         recv.Serv4 = 90 - recv.Serv4;
-        recv.Serv3 = 90 - recv.Serv3;
+        recv.Serv3 = 150 - recv.Serv3;
+
+ 
 
         // Проверка кнопок
         if (recv.Butt1 == 1) { // Запуск/остановка записи
@@ -135,14 +138,14 @@ void loop() {
 
         // Управление клешней
         if (recv.buttRightHand == 1) {
-            currentClaw = 30; // Поворачиваем на 30 градусов, если кнопка нажата
+            currentClaw = 60; // Поворачиваем на 30 градусов, если кнопка нажата
         } else {
-            currentClaw = 90; // Поворачиваем на 90 градусов, если кнопка не нажата
+            currentClaw = 30; // Поворачиваем на 90 градусов, если кнопка не нажата
         }
     }
 
     // Обновление каждые 30 мс
-    if (millis() - lastUpdate >= 30) {
+    if (millis() - lastUpdate >= 20) {
         lastUpdate = millis();
 
         if (recording) {
@@ -179,6 +182,7 @@ void loop() {
         }
 
         // Вывод на последовательный монитор
+  
         Serial.print(" "); Serial.print(currentFing);
         Serial.print(" "); Serial.print(currentElb);
         Serial.print(" "); Serial.print(currentBic);
