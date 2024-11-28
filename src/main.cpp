@@ -51,11 +51,16 @@ bool playing = false;
 bool armEnabled = false; // Переменная для отслеживания состояния кнопки Butt3
 
 // Плавное движение
-int smoothMove(int current, int target, int step) {
+/*int smoothMove(int current, int target, int step) {
     if (abs(target - current) <= step) return target;
     return current + (target > current ? step : -step);
+}*/
+int smoothMove(int current, int target, int step) {
+    int difference = abs(target - current);
+    int dynamicStep = max(1, step * difference / 20); // Шаг зависит от разницы
+    if (difference <= dynamicStep) return target;    // Если разница меньше шага, сразу устанавливаем цель
+    return current + (target > current ? dynamicStep : -dynamicStep);
 }
-
 // Настройка
 void setup() {
     Serial.begin(9600);
@@ -198,10 +203,10 @@ void loop() {
 
         if (armEnabled) {
             // Плавное движение
-            currentFing = smoothMove(currentFing, recv.Serv1, 2);
-            currentElb = smoothMove(currentElb, recv.Serv2, 2);
-            currentBic = smoothMove(currentBic, recv.Serv3, 2);
-            currentShoul = smoothMove(currentShoul, recv.Serv4, 2);
+            currentFing = smoothMove(currentFing, recv.Serv1, 5);
+            currentElb = smoothMove(currentElb, recv.Serv2, 5);
+            currentBic = smoothMove(currentBic, recv.Serv3, 5);
+            currentShoul = smoothMove(currentShoul, recv.Serv4, 5);
 
             RightFing.write(currentFing);
             RightElb.write(currentElb);
