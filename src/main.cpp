@@ -39,8 +39,8 @@ typedef struct ServoAngles {
 
 // Переменные
 ServoAngles recv, buffer[BUFFER_SIZE];
-int currentFing = 90, currentElb = 90, currentBic = 90, currentShoul = 90;
-int currentClaw = 90; // Начальный угол для клешни
+int currentFing = 0, currentElb = 3, currentBic = 90, currentShoul = 90;
+int currentClaw = 0; // Начальный угол для клешни
 
 // Для работы с буфером
 int bufferIndex = 0;
@@ -48,7 +48,7 @@ int recordingIndex = 0;   // Счетчик текущей записи
 unsigned long lastRecordingTime = 0; // Время последнего шага записи
 bool recording = false;
 bool playing = false;
-bool armEnabled = true; // Переменная для отслеживания состояния кнопки Butt3
+bool armEnabled = false; // Переменная для отслеживания состояния кнопки Butt3
 
 // Плавное движение
 int smoothMove(int current, int target, int step) {
@@ -86,6 +86,7 @@ void setup() {
     RightHandClaw.write(currentClaw); // Установим начальный угол клешни
 
     TwoWayESP::Begin(broadcastAddress);
+    
 }
 
 // Основной цикл
@@ -109,31 +110,55 @@ void loop() {
  
 
         // Проверка кнопок
-        if (recv.Butt1 == 1) { // Запуск/остановка записи
-            recording = !recording;
-            if (recording) {
-                playing = false; // Остановить воспроизведение при записи
-                recordingIndex = 0; // Сброс счетчика записи
-                lastRecordingTime = millis(); // Сохранить время начала записи
+        if ((recv.Butt1 == 1)&&(recording != true)) { // Запуск/остановка записи
+            recording = true;
+             recordingIndex = 0; // Сброс счетчика записи
+             bufferIndex=0;
+              lastRecordingTime = millis(); // Сохранить время начала записи
+                              playing = false; // Остановить воспроизведение при записи
+                           
                 Serial.println("Запись началась");
             }
-        }
+     
+               if ((recv.Butt1 == 0)&&(recording == true)) { // Запуск/остановка записи
+             
+              recording = false; // Останавливаем запись
+    recordingIndex = bufferIndex; // Фиксируем длину записи
+    Serial.println("Запись завершена.");                         
+                Serial.println("Запись закончилась");
+            }
+      
+ 
+        if ((recv.Butt2 == 1)&& (playing !=true)) { // Запуск/остановка воспроизведения
+        
+            playing = true;
 
-        if (recv.Butt2 == 1) { // Запуск/остановка воспроизведения
-            playing = !playing;
             if (playing) {
                 recording = false; // Остановить запись при воспроизведении
                 Serial.println("Воспроизведение началось");
             }
         }
+        if ((recv.Butt2 == 0)&& (playing ==true)) { // Запуск/остановка воспроизведения
+        bufferIndex=0;
+            playing = !true;
+            
+        }
 
         if (recv.Butt3 == 1) { // Переключение состояния "руки"
-            armEnabled = !armEnabled;
+            armEnabled = true;
             if (armEnabled) {
                 Serial.println("Рука включена");
             } else {
                 Serial.println("Рука отключена");
             }
+        } else {
+             armEnabled = !true;
+ if (armEnabled) {
+                Serial.println("Рука включена");
+            } else {
+          //      Serial.println("Рука отключена");
+            }
+
         }
 
         // Управление клешней
@@ -155,16 +180,20 @@ void loop() {
             recordingIndex = (recordingIndex + 1) % BUFFER_SIZE; // Обновление счетчика записи
             lastRecordingTime = millis(); // Обновить время последнего шага записи
         } else if (playing) {
-            // Проверка, если буфер пустой
-            if (bufferIndex != 0) {
-                // Воспроизведение из буфера до счетчика записи
-                recv = buffer[bufferIndex];
-                bufferIndex = (bufferIndex + 1) % recordingIndex; // Воспроизведение до текущего индекса записи
-                lastUpdate = millis();
-            } else {
-                playing = false; // Прекратить воспроизведение, если буфер пуст
-                Serial.println("Буфер пуст, воспроизведение остановлено.");
-            }
+            if (recordingIndex > 0) {
+        recv = buffer[bufferIndex]; // Читаем текущий кадр из буфера
+        bufferIndex++; // Переходим к следующему кадру
+
+        // Цикличность: если достигли конца записи, начинаем с начала
+        if (bufferIndex >= recordingIndex) {
+            bufferIndex = 0; // Возвращаемся к началу записи
+            Serial.println("Цикл воспроизведения завершен, начинаем сначала.");
+        }
+    } else {
+        // Если буфер пуст, останавливаем воспроизведение
+        playing = false;
+        Serial.println("Буфер пуст, воспроизведение остановлено.");
+    }
         }
 
         if (armEnabled) {
@@ -183,7 +212,9 @@ void loop() {
 
         // Вывод на последовательный монитор
   
-        Serial.print(" "); Serial.print(currentFing);
+   Serial.print(" "); Serial.print(bufferIndex);
+   Serial.print(":"); Serial.print(recordingIndex);
+        Serial.print("-"); Serial.print(currentFing);
         Serial.print(" "); Serial.print(currentElb);
         Serial.print(" "); Serial.print(currentBic);
         Serial.print(" "); Serial.print(currentShoul);
